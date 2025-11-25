@@ -8,46 +8,60 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// Allow frontend to access backend
+app.use(cors({
+  origin: "*", // you can restrict later
+}));
+
 app.use(express.json());
 
 // Contact form endpoint
 app.post("/api/contact", async (req, res) => {
   const { name, email, message } = req.body;
 
+  // Validate input
   if (!name || !email || !message) {
     return res.status(400).json({ error: "Please fill all fields" });
   }
 
   try {
-    // Nodemailer transporter
+    // Nodemailer transporter setup
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: process.env.EMAIL_USER, // your Gmail
-        pass: process.env.EMAIL_PASS, // your app password
+        user: process.env.EMAIL_USER, // Your Gmail address
+        pass: process.env.EMAIL_PASS, // Your Gmail App Password
       },
     });
 
+    // Email format
     const mailOptions = {
-      from: process.env.EMAIL_USER,   // sender (your Gmail)
-      replyTo: email,                 // so replies go to the user
-      to: process.env.EMAIL_USER,     // receive email
-      subject: `New message from ${name}`,
-      text: message,
-      html: `<p><strong>Name:</strong> ${name}</p>
-             <p><strong>Email:</strong> ${email}</p>
-             <p><strong>Message:</strong><br>${message}</p>`,
+      from: process.env.EMAIL_USER,
+      replyTo: email,
+      to: process.env.EMAIL_USER,
+      subject: `New Contact Form Message from ${name}`,
+      html: `
+        <h2>New Message Received</h2>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Message:</strong></p>
+        <p>${message}</p>
+      `
     };
 
+    // Send the email
     await transporter.sendMail(mailOptions);
 
-    res.status(200).json({ message: "Email sent successfully!" });
+    return res.status(200).json({ message: "Email sent successfully!" });
+
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error sending email" });
+    console.error("Email Error:", error);
+    return res.status(500).json({ error: "Error sending email" });
   }
 });
 
-// Start server
-app.listen(PORT, "0.0.0.0", () => console.log(`Server running on port ${PORT}`));
+// Start backend server
+app.listen(PORT, "0.0.0.0", () =>
+  console.log(`Server running on port ${PORT}`)
+);
+
